@@ -1,0 +1,15 @@
+KUBECONFIG="/root/.kube/config"
+SF_USERNAME="admin"
+SF_PASSWORD="secret01"
+SF_IP="10.10.10.10"
+SF_TARGET_PORTAL="192.168.0.10:3260"
+NO_EXECUTE="True"
+LOG_LEVEL="info"
+
+export KUBECONFIG
+export SF_IP
+export SF_USERNAME
+export SF_PASSWORD
+export SF_TARGET_PORTAL
+export NO_EXECUTE
+export LOG_LEVEL
