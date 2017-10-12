@@ -7,6 +7,7 @@ What does this script do?
 6) update iqn and target portal for this PV and replace PV
 
 Steps to execute :
+0) git clone https://github.com/kapilarora/sf-failover-k8s.git
 1) Setup your profile with kubernetes and SF details. Edit file named profile (set NO_EXECUTE=true for a dry run)
 2) Create your virtualenv: #virtualenv venv
 3) Activate your virtualenv: #source venv/bin/activate
