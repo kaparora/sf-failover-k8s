@@ -30,5 +30,5 @@ class SFClient(object):
         return self._client.remove_volume_pair(volume_id=vol_id)
 
     def modify_volume_access(self, volume_id, access_type):
-        return self._client.modify_volume(volume_id, access_type)
+        return self._client.modify_volume(volume_id, access=access_type)
 

@@ -63,7 +63,7 @@ def main():
                 logging.info('Not Changing volume access type to readWrite for volume %s with vol id: %s as this is a dry run.',
                              pv_name, vol_id)
             else:
-                logging.info('Changing volume access type to readWrite for volume %s with vol id: %s as this is a dry run.',
+                logging.info('Changing volume access type to readWrite for volume %s with vol id: %s .',
                              pv_name, vol_id)
                 sf.modify_volume_access(vol_id, 'readWrite')
                 logging.info('Modified volume accesstype to readWrite', )
@@ -81,17 +81,13 @@ def main():
                     logging.info('Not Updating PV %s as this a dry run', pv_name)
                 else:
                     logging.info('Updating PV %s', pv_name)
-                    pv_updated = k8s.replace_persistent_volume(pv_name, pv)
+                    pv_updated = k8s.update_pv(pv_name, pv)
                     logging.debug('Returned Updated PV %s', pv_updated)
 
             except ApiException as e:
                 print("Exception when calling CoreV1Api->patch_persistent_volume: %s\n" % e)
 
 
-
-
-
-    #print sf.get_volume_iqn('default-perftest-927b8')
 
 
 def _get_Log_level(log_level):
