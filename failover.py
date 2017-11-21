@@ -7,6 +7,7 @@ from solidfire_client import SFClient
 from k8s_client import K8SClient
 from kubernetes.client.rest import ApiException
 import os
+import time
 from time import strftime
 import logging
 
@@ -18,6 +19,8 @@ def main():
     password = os.environ['SF_PASSWORD']
     target_portal = os.environ['SF_TARGET_PORTAL']
     no_execute_str = os.environ['NO_EXECUTE']
+    wait_time = os.environ['WAIT_TIME']
+
     if no_execute_str.lower() == 'true':
         no_execute = True
     else:
@@ -28,12 +31,19 @@ def main():
     log_filename = strftime("sf_failover_k8s_%Y%m%d%H%M%S.log")
     logging.basicConfig(filename=log_filename,
                         level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    try:
+        wait_time += 1
+    except TypeError:
+        wait_time = 5
+
     logging.info('Starting the failover script with following options:')
     logging.info('KUBECONFIG: %s',k8s_config)
     logging.info('SF_IP: %s', ip)
     logging.info('SF_USERNAME: %s', username)
     logging.info('SF_PASSWORD: %s', password)
     logging.info('SF_TARGET_PORTAL: %s', target_portal)
+    logging.info('WAIT_TIME: %s', wait_time)
     if no_execute:
         logging.info('This is just a dry run!')
 
@@ -60,7 +70,7 @@ def main():
             vol_iqns[pv_name] = vol_iqn
 
 
-    logging.info('Starting removal of all volume pairs')
+    logging.info('Step 1: Starting removal of all volume pairs')
 
     for pv_name in vol_ids:
         # remove volume pair
@@ -73,7 +83,10 @@ def main():
             sf.remove_volume_pair(vol_id)
             logging.info('Remove Volume pair started', )
 
-    logging.info('Starting changing all volume access to readWrite')
+    logging.info('Waiting for %s seconds before next step.',wait_time)
+    time.sleep(wait_time)
+
+    logging.info('Step 2: Starting changing all volume access to readWrite')
     for pv_name in vol_ids:
         vol_id = vol_ids[pv_name]
         # change volume access type
@@ -87,9 +100,10 @@ def main():
             sf.modify_volume_access(vol_id, 'readWrite')
             logging.info('Modified volume accesstype to readWrite', )
 
+    logging.info('Waiting for %s seconds before next step.', wait_time)
+    time.sleep(wait_time)
 
-
-    logging.info('Starting Updating PVs with  new IQN and target portal')
+    logging.info('Step 3: Starting Updating PVs with  new IQN and target portal')
     for pv in pvs.items:
         pv_name = pv.metadata.name
         logging.info('Processing PV %s', pv_name)
@@ -114,6 +128,8 @@ def main():
 
             except ApiException as e:
                 print("Exception when calling CoreV1Api->patch_persistent_volume: %s\n" % e)
+
+    logging.info('Failover script completed.')
 
 
 def _get_Log_level(log_level):
