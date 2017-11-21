@@ -41,33 +41,61 @@ def main():
 
     k8s = K8SClient(k8s_config)
     pvs = k8s.get_all_pvs()
+
+    logging.info('Getting IDs and IQNs for all iSCSI Volumes (PVCs) from SolidFire')
+    vol_ids = {}
+    vol_iqns= {}
+
     for pv in pvs.items:
         pv_name = pv.metadata.name
         logging.info('Processing PV %s', pv_name)
         if pv.spec.iscsi is not None:
             logging.info('Verified PV %s is an iSCSI volume', pv_name)
             vol = sf.get_volume(pv_name)
-            vol_iqn = vol.iqn
+
             vol_id = vol.volume_id
-            #remove volume pair
-            if no_execute:
-                logging.info('Not Removing volume pair for volume %s with vol id: %s as this is a dry run.',
-                             pv_name, vol_id)
-            else:
-                logging.info('Removing volume pair for volume %s with vol id: %s', pv_name, vol_id)
-                sf.remove_volume_pair(vol_id)
-                logging.info('Remove Volume pair started', )
+            vol_ids[pv_name] = vol_id
 
-            # change volume access type
-            if no_execute:
-                logging.info('Not Changing volume access type to readWrite for volume %s with vol id: %s as this is a dry run.',
-                             pv_name, vol_id)
-            else:
-                logging.info('Changing volume access type to readWrite for volume %s with vol id: %s .',
-                             pv_name, vol_id)
-                sf.modify_volume_access(vol_id, 'readWrite')
-                logging.info('Modified volume accesstype to readWrite', )
+            vol_iqn = vol.iqn
+            vol_iqns[pv_name] = vol_iqn
 
+
+    logging.info('Starting removal of all volume pairs')
+
+    for pv_name in vol_ids:
+        # remove volume pair
+        vol_id = vol_ids[pv_name]
+        if no_execute:
+            logging.info('Not Removing volume pair for volume %s with vol id: %s as this is a dry run.',
+                         pv_name, vol_id)
+        else:
+            logging.info('Removing volume pair for volume %s with vol id: %s', pv_name, vol_id)
+            sf.remove_volume_pair(vol_id)
+            logging.info('Remove Volume pair started', )
+
+    logging.info('Starting changing all volume access to readWrite')
+    for pv_name in vol_ids:
+        vol_id = vol_ids[pv_name]
+        # change volume access type
+        if no_execute:
+            logging.info(
+                'Not Changing volume access type to readWrite for volume %s with vol id: %s as this is a dry run.',
+                pv_name, vol_id)
+        else:
+            logging.info('Changing volume access type to readWrite for volume %s with vol id: %s .',
+                         pv_name, vol_id)
+            sf.modify_volume_access(vol_id, 'readWrite')
+            logging.info('Modified volume accesstype to readWrite', )
+
+
+
+    logging.info('Starting Updating PVs with  new IQN and target portal')
+    for pv in pvs.items:
+        pv_name = pv.metadata.name
+        logging.info('Processing PV %s', pv_name)
+        if pv.spec.iscsi is not None:
+            logging.info('Verified PV %s is an iSCSI volume', pv_name)
+            vol_iqn = vol_iqns[pv_name]
 
             #update pv
             logging.info('Changing iqn for PV from %s to %s', pv.spec.iscsi.iqn, vol_iqn)
@@ -86,8 +114,6 @@ def main():
 
             except ApiException as e:
                 print("Exception when calling CoreV1Api->patch_persistent_volume: %s\n" % e)
-
-
 
 
 def _get_Log_level(log_level):
